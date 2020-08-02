@@ -1,7 +1,8 @@
 package bb.helper;
 
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Stack;
+import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,7 +14,7 @@ public class LogAdvice {
 	public static final Logger log = LogManager.getLogger(LogAdvice.class);
 
 	public static class Storage {
-		public Stack<String> lines = new Stack<>();
+		public List<String> lines = new ArrayList<>();
 		public int nestedLevel = 0;
 	}
 
@@ -23,8 +24,9 @@ public class LogAdvice {
 	public static long enter(@Advice.Origin("#t") String typeName, @Advice.Origin("#m") String methodName, @Advice.AllArguments(typing = Assigner.Typing.DYNAMIC) Object[] args) {
 		if (shouldLog(typeName, methodName)) {
 			Storage s = storage.get();
-			if (s.nestedLevel > 1000) { // deeply nested methods which never return (e.g. running swing applications) should not use up memory. By resetting the storage they are just not logged anymore (the OnMethodExit method ignores them too with the lines.isEmpty check)
-				storage.set(new Storage());
+			if (s.nestedLevel > 500) { // deeply nested methods which never return (e.g. running swing applications) are trimmed from the outer end to avoid memory consumption
+				log.info("REM (TID=" + Thread.currentThread().getId() + ") " + s.lines.remove(0));
+				s.nestedLevel--;
 			}
 			// System.out.println("E " + typeMethod(typeName, methodName) + " " + s.lines.size() + " & " + nestedLevel);
 			s.lines.add("<" + typeMethod(typeName, methodName) + ">");
@@ -44,22 +46,23 @@ public class LogAdvice {
 				return;
 			}
 			if (durationMs < 5) { // if this method ends faster than 5ms, delete the last logline (such short durations are not logged
-				s.lines.pop();
+				s.lines.remove(s.lines.size() - 1);
 			}
 			else { // otherwise add this method
 				s.lines.add("</" + typeMethod(typeName, methodName) + " ms=\"" + durationMs + "\" >");
 			}
-			if (--s.nestedLevel == 0) {
+			if (--s.nestedLevel == 0 && !s.lines.isEmpty()) {
 				for (String l : s.lines) {
 					log.info(l);
 				}
+				log.info("--- TID=" + Thread.currentThread().getId());
 				s.lines.clear();
 			}
 		}
 	}
 
 	public static String typeMethod(String typeName, String methodName) {
-		return "call type=\"" + typeName.replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("&", "&amp;").replace("'", "&apos;") + "\"" + " method=\"" + methodName.replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("&", "&amp;").replace("'", "&apos;") + "\"";
+		return "call name=\"" + (typeName + "#" + methodName).replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("&", "&amp;").replace("'", "&apos;") + "\"";
 	}
 
 	public static boolean shouldLog(String typeName, String methodName) {
