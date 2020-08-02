@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Configuration strict="true">
+	<Appenders>
+		<Appender type="Console" name="STDOUT">
+			<!-- <Layout type="PatternLayout" pattern="NORMALLOG %m%n" /> (to test it normal logs are disabled) -->
+			<Layout type="PatternLayout" pattern=" " />
+		</Appender>
+		<Appender type="Console" name="CALLTREE">
+			<Layout type="PatternLayout" pattern="%m%n" />
+		</Appender>
+	</Appenders>
+	<Loggers>
+		<Logger name="bb.helper.LogAdvice" level="info" additivity="false">
+			<AppenderRef ref="CALLTREE" />
+		</Logger>
+		<Root level="info">
+			<AppenderRef ref="STDOUT" />
+		</Root>
+	</Loggers>
+</Configuration>
