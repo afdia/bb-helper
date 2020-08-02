@@ -20,9 +20,14 @@ public class OtherClass {
 		public static void longDurationSay() {
 			try {
 				Thread.sleep(1000);
+				shortSay();
 			}
 			catch (InterruptedException e) {}
 			log.info("Long duration Hello");
+		}
+
+		public static void shortSay() {
+			log.info("Quick Hello");
 		}
 	}
 }
